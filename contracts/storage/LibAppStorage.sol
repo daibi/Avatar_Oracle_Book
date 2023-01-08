@@ -18,7 +18,7 @@ import { LibDiamond } from "../libraries/LibDiamond.sol";
 /**
  * TODO define the name of the main object for this project
  */
-struct SomeMainCharacter {
+struct Avatar {
 
     /** owner of this object */
     address owner;
@@ -28,6 +28,35 @@ struct SomeMainCharacter {
      **********************************************/
 
     // TODO make metadata definitions here
+
+    /** type of this avatar */
+    uint256 avatarType;
+
+    /** 
+     * rank of this avatar
+     * 1 - Egg
+     * 2 - Seed
+     * 3 - Spirit
+     * 4 - Doppelganger 
+     */
+    uint8 rank;
+
+    /**
+     * time limited boosts(features) array
+     * 0 - 
+     */
+
+
+    /**
+     * TimeDecay of this Avatar, represented by time interval between now and last interaction timestamp 
+     */
+    uint256 timeDecay;
+
+    /**
+     * Echo of this Avatar, denoted as percentage(%)
+     */
+    uint256 echo;
+
 
     /********************************************** 
      ******** TODO some other metadata ends *******
