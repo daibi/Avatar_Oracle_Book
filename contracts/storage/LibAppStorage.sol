@@ -23,12 +23,6 @@ struct Avatar {
     /** owner of this object */
     address owner;
 
-    /********************************************** 
-     ******* TODO some other metadata start *******
-     **********************************************/
-
-    // TODO make metadata definitions here
-
     /** type of this avatar */
     uint256 avatarType;
 
@@ -41,12 +35,15 @@ struct Avatar {
      */
     uint8 rank;
 
-    /**
-     * time limited boosts(features) array
-     * 0 - 
-     */
+    /** last update time of the following SNAPSHOT metadata */
+    uint256 lastTimestamp;
 
-
+    /**************************************************************************** 
+     *= Snapshot Metadata Start ================================================*
+     *= NOTE: value of these metadatas are SNAPSHOT taken at last update time. =*
+     *======= These values are really updated when users have some actions =====*
+     *======= affecting these metadata. i.e: Do a divination ===================*
+     ****************************************************************************/
     /**
      * TimeDecay of this Avatar, represented by time interval between now and last interaction timestamp 
      */
@@ -57,10 +54,15 @@ struct Avatar {
      */
     uint256 echo;
 
+    /**
+     * Coverage of this Avatar, denoted as percentage(%)
+     */
+    uint256 convergence;
 
-    /********************************************** 
-     ******** TODO some other metadata ends *******
-     **********************************************/
+
+    /****************************************************************************
+     *= Snapshot Metadata End ==================================================*
+     ****************************************************************************/
 
 }
 
@@ -97,13 +99,15 @@ struct ChainlinkRequestStatus {
  */
 struct AppStorage {
 
-    // TODO: define the recorder of project's main object
+    /** Counter for minted Avatars */
+    Counters.Counter avatarCounter;
 
-    /** Counter for mainCharacterCounter */
-    Counters.Counter mainCharacterCounter;
+    /** tokenId -> Avatar */
+    mapping(uint256 => Avatar) avatars;
 
-    mapping(uint256 => SomeMainCharacter) someMainCharacters;
-
+    /** address -> tokenId list */
+    mapping(address => uint256[]) avatarCollection;
+    
 
     // TODO define other storage settings here
 }
