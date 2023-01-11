@@ -99,8 +99,11 @@ struct ChainlinkRequestStatus {
  */
 struct AppStorage {
 
-    /** Counter for minted Avatars */
+    /** Counter for minted normal Avatars */
     Counters.Counter avatarCounter;
+
+    /** Counters for minted legendary Avatars */
+    Counters.Counter legendaryAvatarCounter;
 
     /** tokenId -> Avatar */
     mapping(uint256 => Avatar) avatars;
@@ -109,7 +112,12 @@ struct AppStorage {
     mapping(address => uint256[]) avatarCollection;
     
 
-    // TODO define other storage settings here
+    /****************************************************************************
+     *= System configs start ===================================================*
+     ****************************************************************************/
+
+    /** Avatar mint started switch */
+    bool avatarStarted;
 }
 
 /**
