@@ -36,6 +36,9 @@ struct Avatar {
      */
     uint8 rank;
 
+    /** time of this Avatar generated */
+    uint128 mintTime;
+
     /** last update time of the following SNAPSHOT metadata */
     uint256 lastTimestamp;
 
@@ -121,7 +124,9 @@ struct AppStorage {
 
     /** address -> tokenId list */
     mapping(address => uint256[]) avatarCollection;
-    
+
+    /** address -> tokenId -> index */
+    mapping(address => mapping(uint256 => uint256)) avatarIdIndex;
 
     /****************************************************************************
      *= System configs start ===================================================*

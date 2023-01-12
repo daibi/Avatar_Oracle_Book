@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.6;
 
-import { Modifiers } from '../storage/LibAppStorage.sol';
+import { Modifiers } from '../../storage/LibAppStorage.sol';
 import { Counters } from "@openzeppelin/contracts/utils/Counters.sol";
-import { LibConstant } from '../libraries/avatar/LibConstant.sol';
-import { LibAvatar } from '../libraries/avatar/LibAvatar.sol';
+import { LibConstant } from '../libs/LibConstant.sol';
+import { LibAvatar } from '../libs/LibAvatar.sol';
 
 /**
  * main NFT character - Avatar Facet
