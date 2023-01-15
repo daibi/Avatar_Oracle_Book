@@ -4,6 +4,15 @@
 const { ethers } = require('hardhat')
 const { getSelectors, FacetCutAction } = require('./libraries/diamond.js')
 
+async function deployMockVRFCoordinator () {
+  // deploy mock VRF coordinator
+  const MockVRFCoordinator = await ethers.getContractFactory('MockVRFCoordinator')
+  const mockVRFCoordinator = await MockVRFCoordinator.deploy()
+  await mockVRFCoordinator.deployed()
+
+  return mockVRFCoordinator
+}
+
 async function deployDiamond (vrfCoordinatorAddress) {
   const accounts = await ethers.getSigners()
   const contractOwner = accounts[0]
@@ -69,7 +78,7 @@ async function deployDiamond (vrfCoordinatorAddress) {
   const avatarFacet = await AvatarFacet.deploy()
 
   await avatarFacet.deployed()
-
+  
   // deploy the init contract for avatarFacet plugin
   const AvatarFacetInit = await ethers.getContractFactory('AvatarFacetInit')
   const avatarFacetInit = await AvatarFacetInit.deploy()
@@ -90,7 +99,7 @@ async function deployDiamond (vrfCoordinatorAddress) {
   if (!receipt.status) {
     throw Error(`Diamond upgrade failed: ${tx.hash}`)
   }
-  console.log('Completed AvatarFacet')
+  console.log('Completed AvatarFacet: ', avatarFacet.address)
 
   // upgrade diamond with VRFFacet
   const VRFFacet = await ethers.getContractFactory('VRFFacet')
@@ -103,7 +112,7 @@ async function deployDiamond (vrfCoordinatorAddress) {
   await vrfFacetInit.deployed()
 
   const vrfSelectors = getSelectors(vrfFacet)
-  let vrfInitCalldata = vrfFacetInit.interface.encodeFunctionData('init', [ethers.constants.AddressZero, 2796, "0x4b09e658ed251bcafeebbc69400383d49f344ace09b9576fe248bb02c003fe9f", 100000, 3, 1])
+  let vrfInitCalldata = vrfFacetInit.interface.encodeFunctionData('init', [vrfCoordinatorAddress, 2796, "0x4b09e658ed251bcafeebbc69400383d49f344ace09b9576fe248bb02c003fe9f", 100000, 3, 1])
   tx = await diamondCut.diamondCut(
     [{
       facetAddress: vrfFacet.address,
@@ -116,21 +125,10 @@ async function deployDiamond (vrfCoordinatorAddress) {
   if (!receipt.status) {
     throw Error(`Diamond upgrade failed: ${tx.hash}`)
   }
-  console.log('Completed VRFFacet')
+  console.log('Completed VRFFacet: ', vrfFacet.address)
 
   return diamond.address
 }
 
-
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
-if (require.main === module) {
-  deployDiamond()
-    .then(() => process.exit(0))
-    .catch(error => {
-      console.error(error)
-      process.exit(1)
-    })
-}
-
 exports.deployDiamond = deployDiamond
+exports.deployMockVRFCoordinator = deployMockVRFCoordinator

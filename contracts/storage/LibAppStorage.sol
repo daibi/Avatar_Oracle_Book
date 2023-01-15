@@ -3,6 +3,7 @@ pragma solidity ^0.8.7;
 
 import { Counters } from "@openzeppelin/contracts/utils/Counters.sol";
 import { LibDiamond } from "../libraries/LibDiamond.sol";
+import { VRFCoordinatorV2Interface } from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 
 /* 
  * Storage Slot Defination In a Human Readable Format
@@ -15,16 +16,16 @@ import { LibDiamond } from "../libraries/LibDiamond.sol";
  * For every NEWLY introduced storage, developers should design the storage pattern in AppStorage to have a better accessing performance.
 */ 
 
-/**
- * TODO define the name of the main object for this project
- */
 struct Avatar {
 
     /** owner of this object */
     address owner;
 
+    /** current status 1=running, 2=VRF Rending, 3=invalid */
+    uint8 status;
+
     /** type of this avatar */
-    uint256 avatarType;
+    uint16 avatarType;
 
     /** 
      * rank of this avatar
@@ -35,8 +36,14 @@ struct Avatar {
      */
     uint8 rank;
 
+    /** time of this Avatar generated */
+    uint128 mintTime;
+
+    /** random number generated from chainlink VRF */
+    uint256 randomNumber;
+
     /** last update time of the following SNAPSHOT metadata */
-    uint256 lastTimestamp;
+    uint128 lastUpdateTime;
 
     /**************************************************************************** 
      *= Snapshot Metadata Start ================================================*
@@ -67,13 +74,23 @@ struct Avatar {
 }
 
 /****************************************************** 
- *** TODO other assistant objects definition starts ***
+ ***** other assistant objects definition starts ******
  ******************************************************/
 
-// TODO make other assistant definitions here
+/**
+ * chianlink VRF request status recorder
+ */
+struct RequestStatus {
+    bool fulfilled; // whether the request has been successfully fulfilled
+    bool exists; // whether a requestId exists
+    uint8 scene; // Usage for this requestId: 0-mainNFT; 1-fortuneCookie
+    uint256 tokenId; // request random number result used for certain tokenId
+    uint256[] randomWords;
+}
+
 
 /****************************************************** 
- **** TODO other assistant objects definition ends ****
+ ******* other assistant objects definition ends ******
  ******************************************************/
 
 /**
@@ -99,17 +116,64 @@ struct ChainlinkRequestStatus {
  */
 struct AppStorage {
 
-    /** Counter for minted Avatars */
+    /** Counter for minted normal Avatars */
     Counters.Counter avatarCounter;
+
+    /** Counters for minted legendary Avatars */
+    Counters.Counter legendaryAvatarCounter;
 
     /** tokenId -> Avatar */
     mapping(uint256 => Avatar) avatars;
 
     /** address -> tokenId list */
     mapping(address => uint256[]) avatarCollection;
-    
 
-    // TODO define other storage settings here
+
+    /****************************************************************************
+     *= System configs start ===================================================*
+     ****************************************************************************/
+
+    /** Avatar mint started switch */
+    bool avatarStarted;
+    
+    /************** chainlink configs start ***************/
+
+    /** chainlink config initialized */
+    bool chainlinkInit;
+
+    mapping(uint256 => RequestStatus) s_requests; /* requestId --> requestStatus */
+
+    /** Version2 VRF coordinator */
+    VRFCoordinatorV2Interface COORDINATOR;
+
+    /** VRF subscription ID. */
+    uint64 s_subscriptionId;
+
+    /** VRF Coordinator address - it varies from different blockchain network */
+    address vrfCoordinator;
+
+    /** VRF keyhash - it varies from different blockchain network */
+    bytes32 keyHash;
+
+    // Depends on the number of requested values that you want sent to the
+    // fulfillRandomWords() function. Storing each word costs about 20,000 gas,
+    // so 100,000 is a safe default for this example contract. Test and adjust
+    // this limit based on the network that you select, the size of the request,
+    // and the processing of the callback request in the fulfillRandomWords()
+    // function.
+    uint32 callbackGasLimit;
+
+    // The default is 3, but you can set this higher.
+    uint16 requestConfirmations;
+
+    // number of rundom number retrieved from chainlink
+    uint32 numWords;
+
+    /************** chainlink configs end ********************/
+
+    /****************************************************************************
+     *= System configs end ===================================================*
+     ****************************************************************************/
 }
 
 /**
