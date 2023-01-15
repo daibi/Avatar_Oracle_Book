@@ -25,7 +25,7 @@ struct Avatar {
     uint8 status;
 
     /** type of this avatar */
-    uint256 avatarType;
+    uint16 avatarType;
 
     /** 
      * rank of this avatar
@@ -39,8 +39,11 @@ struct Avatar {
     /** time of this Avatar generated */
     uint128 mintTime;
 
+    /** random number generated from chainlink VRF */
+    uint256 randomNumber;
+
     /** last update time of the following SNAPSHOT metadata */
-    uint256 lastTimestamp;
+    uint128 lastUpdateTime;
 
     /**************************************************************************** 
      *= Snapshot Metadata Start ================================================*
@@ -125,8 +128,6 @@ struct AppStorage {
     /** address -> tokenId list */
     mapping(address => uint256[]) avatarCollection;
 
-    /** address -> tokenId -> index */
-    mapping(address => mapping(uint256 => uint256)) avatarIdIndex;
 
     /****************************************************************************
      *= System configs start ===================================================*

@@ -1,11 +1,3 @@
-/*
- * @Author: daibi dbfornewsletter@outlook.com
- * @Date: 2023-01-05 06:35:14
- * @LastEditors: daibi dbfornewsletter@outlook.com
- * @LastEditTime: 2023-01-06 08:15:48
- * @FilePath: /Avatar_Oracle_Book/hardhat.config.js
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
- */
 /* global ethers task */
 require('@nomiclabs/hardhat-waffle')
 require("dotenv").config()
@@ -46,10 +38,10 @@ module.exports = {
       initialBaseFeePerGas: 0,
       blockGasLimit: 18800000,
     },
-    mumbai: {
-      url: ALCHEMY_API_URL,
-      accounts: [`0x${PRIVATE_KEY}`]
-    }
+    // mumbai: {
+    //   url: ALCHEMY_API_URL,
+    //   accounts: [`0x${PRIVATE_KEY}`]
+    // }
   },
   namedAccounts: {
     deployer: 0
