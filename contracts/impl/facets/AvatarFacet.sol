@@ -5,8 +5,9 @@ import { Modifiers, RequestStatus } from '../../storage/LibAppStorage.sol';
 import { Counters } from "@openzeppelin/contracts/utils/Counters.sol";
 import { LibConstant } from '../libs/LibConstant.sol';
 import { LibAvatar } from '../libs/LibAvatar.sol';
+import { LibAvatarMetadata } from '../libs/variables/LibAvatarMetadata.sol';
 import { VRFCoordinatorV2Interface } from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-
+import "hardhat/console.sol";
 /**
  * main NFT character - Avatar Facet
  */
@@ -33,25 +34,28 @@ contract AvatarFacet is Modifiers {
         uint8 status,
         uint16 avatarType,
         uint8 rank,
-        uint128 mintTime,
+        uint64 mintTime,
         uint256 randomNumber,
-        uint128 lastUpdateTime,
-        uint256 timeDecay,
-        uint256 echo,
-        uint256 convergence
+        uint64 lastUpdateTime,
+        uint32 chronosis,
+        uint32 echo,
+        uint32 convergence
     ) {
         require(s.avatars[_tokenId].status > 0, "AvatarFacet: avatar not exist");
 
         owner = s.avatars[_tokenId].owner;
         status = s.avatars[_tokenId].status;
         avatarType = s.avatars[_tokenId].avatarType;
-        rank = s.avatars[_tokenId].rank;
         mintTime = s.avatars[_tokenId].mintTime;
-        randomNumber = s.avatars[_tokenId].randomNumber;
-        lastUpdateTime = s.avatars[_tokenId].lastUpdateTime;
-        timeDecay = s.avatars[_tokenId].timeDecay;
-        echo = s.avatars[_tokenId].echo;
-        convergence = s.avatars[_tokenId].convergence;
+
+        // should render the following variables when status is STATUS_RUNNING
+        if (status == LibConstant.STATUS_RUNNING) {
+            rank = s.avatars[_tokenId].rank;
+            randomNumber = s.avatars[_tokenId].randomNumber;
+            lastUpdateTime = s.avatars[_tokenId].lastUpdateTime;
+            console.log("into metadata rendering, last update time, %d", lastUpdateTime);
+            (chronosis, echo, convergence) = LibAvatarMetadata.currentMetadata(_tokenId);
+        }
     }
 
     /**
