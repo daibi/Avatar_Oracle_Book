@@ -5,7 +5,7 @@ import { Modifiers, RequestStatus } from '../../storage/LibAppStorage.sol';
 import { Counters } from "@openzeppelin/contracts/utils/Counters.sol";
 import { LibConstant } from '../libs/LibConstant.sol';
 import { LibAvatar } from '../libs/LibAvatar.sol';
-import { LibAvatarMetadata } from '../libs/variables/LibAvatarMetadata.sol';
+import { LibAvatarMetadata, UpdateValues } from '../libs/variables/LibAvatarMetadata.sol';
 import { VRFCoordinatorV2Interface } from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "hardhat/console.sol";
 /**
@@ -54,7 +54,10 @@ contract AvatarFacet is Modifiers {
             randomNumber = s.avatars[_tokenId].randomNumber;
             lastUpdateTime = s.avatars[_tokenId].lastUpdateTime;
             console.log("into metadata rendering, last update time, %d", lastUpdateTime);
-            (chronosis, echo, convergence) = LibAvatarMetadata.currentMetadata(_tokenId);
+            UpdateValues memory updateValues = LibAvatarMetadata.currentMetadata(_tokenId);
+            chronosis = updateValues.chronosis;
+            echo = updateValues.echo;
+            convergence = updateValues.convergence;
         }
     }
 

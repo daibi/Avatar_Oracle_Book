@@ -60,9 +60,10 @@ library LibAvatar {
         s.avatars[_tokenId].rank = LibConstant.AVATAR_RANK_EGG;
         
         // render initial numerical values - start
-        s.avatars[_tokenId].chronosis = 50;
-        s.avatars[_tokenId].echo = 50;
-        s.avatars[_tokenId].convergence = 50;
+        // @dev to see the decaying effect in a more tangible way, we should keep .1 precision. And since solidity doesn't support decimal, we initialize the value with *10 boost
+        s.avatars[_tokenId].chronosis = 500;
+        s.avatars[_tokenId].echo = 500;
+        s.avatars[_tokenId].convergence = 500;
         // render initial numerical values - end
 
         // last update time init, start to decay

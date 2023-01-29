@@ -8,7 +8,7 @@ import { LibChronosis } from './LibChronosis.sol';
 import { LibEcho } from './LibEcho.sol';
 import { LibConvergence } from './LibConvergence.sol';
 
-import { toWadUnsafe } from "../common/SignedWadMath.sol";
+import { toWadUnsafe, unWadUnsafe } from "../common/SignedWadMath.sol";
 
 import "hardhat/console.sol";
 
@@ -25,9 +25,9 @@ struct MetadataCalcParams {
 
 
     /************ decay rate values starts  **************/
-    uint16 coefficient;
-    uint16 echoDecayRate;
-    uint16 convergenceDecayRate;
+    uint256 coefficientWad;
+    uint256 echoDecayRateWad;
+    uint256 convergenceDecayRateWad;
     /************* decay rate values ends  ***************/
 
     /************** common condition values starts *************/
@@ -35,6 +35,7 @@ struct MetadataCalcParams {
     uint64 lastUpdateTime;
     uint64 currentTime;
     uint64 nextThresholdTimestamp;
+    uint8 rank;
     /*************** common condition values ends **************/
 
 }
@@ -56,75 +57,82 @@ struct UpdateValues {
  */
 library LibAvatarMetadata {
 
+    /**
+     * calculate current metadata value given the decay effect for _tokenId
+     * 
+     * @param   _tokenId        token id 
+     * @return  updateValues    updated snapshot values
+     */
     function currentMetadata(uint256 _tokenId) internal view 
         returns(
-            uint32 newChronosis, 
-            uint32 newEcho, 
-            uint32 newConvergence
+            UpdateValues memory updateValues
         ) {
         AppStorage storage s = LibAppStorage.diamondStorage();
         require(s.avatars[_tokenId].status > 0, 'LibAvatarMetadata: invalid token id');
 
         uint64 currentTime = uint64(block.timestamp);
 
-        uint64 lastUpdateTime = s.avatars[_tokenId].lastUpdateTime;
-        uint8 rank = s.avatars[_tokenId].rank; 
-
-        // BE AWARE: these are snapshot value!
-        uint32 chronosis = s.avatars[_tokenId].chronosis;
-        uint32 echo = s.avatars[_tokenId].echo; 
-        uint32 convergence = s.avatars[_tokenId].convergence;
-
-        // based on last snapshot chronosis value & rank, get current chronosis decay rate
-        (uint16 coefficient, bool exponential) = LibChronosis.getBaseDecayRate(rank, chronosis);
-
-        // coeffcient should get waded since it may involve decimal calculation
-        uint256 coefficientWad = toWadUnsafe(coefficient);
-        console.log("Current Chronosis value: %d, base decay rate: %d, exponential config: %s", chronosis, coefficientWad, exponential);
-            
-        /****** Decay rate coefficient effect calculation starts *********/
-        // based on last snapshot echo, convergence, etc..., calculate current final decay rate of chronsis affected by these metadatas
-        // 1. affected by current echo value
-        coefficientWad = LibEcho.getAffectedDecayRate(rank, echo, coefficient, exponential);
-        // 2. affected by current convergence value
-        coefficientWad = LibConvergence.getAffectedDecayRate(rank, convergence, coefficientWad, exponential);
-
-        console.log("coefficient after other metadata's effect: %d", coefficientWad);
-        /******** Decay rate coefficient effect calculation ends *********/
-
-        /********** Correlated decay rate for other metadatas starts *********/
-        // 1. correlated decay rate for Echo
-        uint16 echoDecayRate = LibEcho.getCorrelateDecayRate(coefficient);
-        // 2. correlated decay rate for Convergence
-        uint16 convergenceDecayRate = LibConvergence.getCorrelateDecayRate(coefficient);
-        /*********** Correlated decay rate for other metadatas ends **********/
-
         // init calculation param structure
         MetadataCalcParams memory calcParams = MetadataCalcParams({
-            chronosis: chronosis, 
-            echo: echo,
-            convergence: convergence,
-            coefficient: coefficient,
-            echoDecayRate: echoDecayRate,
-            convergenceDecayRate: convergenceDecayRate,
-            exponential: exponential,
-            lastUpdateTime: lastUpdateTime,
+            chronosis: s.avatars[_tokenId].chronosis, 
+            echo: s.avatars[_tokenId].echo,
+            convergence: s.avatars[_tokenId].convergence,
+            coefficientWad: 0,
+            echoDecayRateWad: 0,
+            convergenceDecayRateWad: 0,
+            exponential: false,
+            lastUpdateTime: s.avatars[_tokenId].lastUpdateTime,
             currentTime: currentTime,
-            nextThresholdTimestamp: currentTime
+            nextThresholdTimestamp: currentTime,
+            rank: s.avatars[_tokenId].rank
         });
 
         // during each loop, calculate the nearest metadata's threshold that is before current timestamp
-        uint256 nextThresholdTimestamp = currentTime;
-        UpdateValues memory updateValues;
         do {
+            // based on last snapshot chronosis value & rank, get current chronosis decay rate
+            (uint16 coefficient, bool exponential) = LibChronosis.getBaseDecayRate(calcParams.rank, calcParams.chronosis);
+
+            // coeffcient should get waded since it may involve decimal calculation
+            uint256 coefficientWad = toWadUnsafe(coefficient);
+            console.log("Current Chronosis value: %d, base decay rate: %d, exponential config: %s", calcParams.chronosis, coefficientWad, exponential);
+                
+            /****** Decay rate coefficient effect calculation starts *********/
+            // based on last snapshot echo, convergence, etc..., calculate current final decay rate of chronsis affected by these metadatas
+            // 1. affected by current echo value
+            coefficientWad = LibEcho.getAffectedDecayRate(calcParams.rank, calcParams.echo, coefficientWad, exponential);
+            // 2. affected by current convergence value
+            coefficientWad = LibConvergence.getAffectedDecayRate(calcParams.rank, calcParams.convergence, coefficientWad, exponential);
+            console.log("coefficient after effect: %d", coefficientWad);
+            /******** Decay rate coefficient effect calculation ends *********/
+
+            /********** Correlated decay rate for other metadatas starts *********/
+            // 1. correlated decay rate for Echo
+            uint256 echoDecayRateWad = LibEcho.getCorrelateDecayRate(coefficientWad);
+            // 2. correlated decay rate for Convergence
+            uint256 convergenceDecayRateWad = LibConvergence.getCorrelateDecayRate(coefficientWad);
+            /*********** Correlated decay rate for other metadatas ends **********/
+
+            // update coeffcients value in calcParams
+            calcParams.coefficientWad = coefficientWad;
+            calcParams.echoDecayRateWad = echoDecayRateWad;
+            calcParams.convergenceDecayRateWad = convergenceDecayRateWad;
+            calcParams.exponential = exponential;
+
             // record timestamp result
             calcParams.nextThresholdTimestamp = uint64(getNextThresholdTimestamp(calcParams));
 
+            console.log('next threshold timestamp: %d, current maximal threshold: %d', calcParams.nextThresholdTimestamp, currentTime);
             // batch update metadata value
             updateValues = batchUpdate(calcParams);
+
+            // update values inside calcParams
+            calcParams.lastUpdateTime = calcParams.nextThresholdTimestamp;
+            calcParams.chronosis = updateValues.chronosis;
+            calcParams.echo = updateValues.echo;
+            calcParams.convergence = updateValues.convergence;
             
             /*********** Next loop Starts **********/
-        } while (calcParams.nextThresholdTimestamp < currentTime);
+        } while (calcParams.nextThresholdTimestamp < currentTime && !hasZero(calcParams)); 
     }
 
     /**
@@ -133,19 +141,19 @@ library LibAvatarMetadata {
      * @param   calcParams      calculate input params
      * @return  result          next timestamp for reaching threshold
      */
-    function getNextThresholdTimestamp(MetadataCalcParams memory calcParams) internal pure returns (uint256) {
+    function getNextThresholdTimestamp(MetadataCalcParams memory calcParams) internal view returns (uint256) {
         uint256 nextThresholdTimestamp = uint256(calcParams.currentTime);
         // chronosis
         nextThresholdTimestamp = Math.min(nextThresholdTimestamp,
-                LibChronosis.getNextThresholdTimestamp(calcParams.chronosis, calcParams.coefficient, calcParams.exponential, calcParams.lastUpdateTime, calcParams.currentTime));
+                LibChronosis.getNextThresholdTimestamp(calcParams.chronosis, calcParams.rank, calcParams.coefficientWad, calcParams.exponential, calcParams.lastUpdateTime, calcParams.currentTime));
 
         // echo
         nextThresholdTimestamp = Math.min(nextThresholdTimestamp, 
-                LibEcho.getNextThresholdTimestamp(calcParams.echo, calcParams.echoDecayRate, calcParams.exponential, calcParams.lastUpdateTime, calcParams.currentTime));
+                LibEcho.getNextThresholdTimestamp(calcParams.echo, calcParams.rank, calcParams.echoDecayRateWad, calcParams.exponential, calcParams.lastUpdateTime, calcParams.currentTime));
             
         // convergence
         nextThresholdTimestamp = Math.min(nextThresholdTimestamp, 
-                LibConvergence.getNextThresholdTimestamp(calcParams.convergence, calcParams.convergenceDecayRate, calcParams.exponential, calcParams.lastUpdateTime, calcParams.currentTime));
+                LibConvergence.getNextThresholdTimestamp(calcParams.convergence, calcParams.rank, calcParams.convergenceDecayRateWad, calcParams.exponential, calcParams.lastUpdateTime, calcParams.currentTime));
 
         return uint64(nextThresholdTimestamp);
     }
@@ -157,18 +165,19 @@ library LibAvatarMetadata {
      * @param   calcParams      calculate input params
      * @return  updateValues    updated metadata value
      */
-    function batchUpdate(MetadataCalcParams memory calcParams) internal pure returns (
+    function batchUpdate(MetadataCalcParams memory calcParams) internal view returns (
             UpdateValues memory updateValues
     ) {
+        console.log('start updating value, lastUpdate time: %d, currentTime: %d, nextThreshold timestamp: %d', calcParams.lastUpdateTime, calcParams.currentTime, calcParams.nextThresholdTimestamp);
         // for the nearest elapsed time for one of the metadatas' coming to its threshold, calculate other metadata's value at that moment
         // chronosis
-        updateValues.chronosis = update(calcParams.lastUpdateTime, calcParams.nextThresholdTimestamp, calcParams.chronosis, calcParams.coefficient, calcParams.exponential);
+        updateValues.chronosis = update(calcParams.lastUpdateTime, calcParams.nextThresholdTimestamp, calcParams.chronosis, calcParams.coefficientWad, calcParams.exponential);
             
         // echo
-        updateValues.echo = update(calcParams.lastUpdateTime, calcParams.nextThresholdTimestamp, calcParams.echo, calcParams.echoDecayRate, calcParams.exponential);
+        updateValues.echo = update(calcParams.lastUpdateTime, calcParams.nextThresholdTimestamp, calcParams.echo, calcParams.echoDecayRateWad, calcParams.exponential);
 
         // convergence
-        updateValues.convergence = update(calcParams.lastUpdateTime, calcParams.nextThresholdTimestamp, calcParams.convergence, calcParams.convergenceDecayRate, calcParams.exponential);
+        updateValues.convergence = update(calcParams.lastUpdateTime, calcParams.nextThresholdTimestamp, calcParams.convergence, calcParams.convergenceDecayRateWad, calcParams.exponential);
     }
 
     /**
@@ -182,13 +191,28 @@ library LibAvatarMetadata {
      * 
      * @return  currentValue      updated value
      */
-    function update(uint64 from, uint64 to, uint32 snapshot, uint16 decayRate, bool exponential) internal pure returns(uint32 currentValue) {
+    function update(uint64 from, uint64 to, uint32 snapshot, uint256 decayRate, bool exponential) internal view returns(uint32 currentValue) {
         // 1. calculate elapsed minute from <from> to <to>
-        uint256 elapsedMinute = Math.mulDiv(SafeMath.sub(to, from), 1, 60 * 1000, Math.Rounding.Down);
+        console.log('start updating.. from %d, to %d, elapsed time: %d', from, to, SafeMath.sub(to, from));
+        uint256 elapsedMinute = Math.mulDiv(SafeMath.sub(to, from), 1, 60, Math.Rounding.Down);
+
+        console.log('snapshot value: %d, decayRate: %d, elapsedMinute: %d', snapshot, decayRate, elapsedMinute);
 
         // 2. given current decay rate, exponential config, calculate updated value
-        currentValue = exponential ? uint32(snapshot - decayRate * elapsedMinute * elapsedMinute) :
-            uint32(snapshot - decayRate * elapsedMinute);
+        uint256 decayedValue = exponential ? decayRate * elapsedMinute * elapsedMinute : 
+            decayRate * elapsedMinute;
+        
+        uint256 snapshotWad = toWadUnsafe(snapshot);
 
+        uint256 currentValueWad = snapshotWad > decayedValue ?  snapshotWad - decayedValue : 0;
+
+        // unwad current value
+        currentValue = uint32(unWadUnsafe(currentValueWad));
+        console.log('currentValueWad: %d, currentValue: %d', currentValueWad, currentValue);
+
+    }
+
+    function hasZero(MetadataCalcParams memory calcParams) internal pure returns (bool) {
+        return calcParams.chronosis == 0 || calcParams.echo == 0 || calcParams.convergence == 0;
     }
 }

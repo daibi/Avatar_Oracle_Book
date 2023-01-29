@@ -3,6 +3,7 @@ pragma solidity ^0.8.6;
 
 import { Math } from  "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import { toWadUnsafe, unsafeWadDiv } from "../common/SignedWadMath.sol";
 import "hardhat/console.sol";
 
 /**
@@ -42,19 +43,19 @@ library LibChronosis {
     function getMaxValue(uint8 rank) internal pure returns (uint32 maxValue) {
         if (rank == 1) {
             // egg
-            return 50;
+            return 500;
         } 
         if (rank == 2) {
             // seed
-            return 60;
+            return 600;
         }
         if (rank == 3) {
             // Spirit
-            return 75;
+            return 750;
         }
         if (rank == 4) {
             // Doppleganger
-            return 100;
+            return 1000;
         }
     }
 
@@ -78,7 +79,7 @@ library LibChronosis {
      * @param   exponential     check if current decaying effect is exponential
      */
     function getCoefficient(bool exponential) internal pure returns (uint16 coefficient) {
-        return exponential ? 2 : 2;
+        return exponential ? 20 : 20;
     }
 
     /**
@@ -87,6 +88,7 @@ library LibChronosis {
      * @dev the minimal decaying threshold should be ZERO(0)
      * 
      * @param   chronosis       current chronosis value
+     * @param   rank            avatar rank
      * @param   coefficient     decay rate coefficient
      * @param   exponential     if current decay mode is in exponential
      * @param   lastUpdateTime  chronosis's last update time
@@ -96,24 +98,34 @@ library LibChronosis {
      */
     function getNextThresholdTimestamp(
         uint32 chronosis, 
-        uint16 coefficient, 
+        uint8 rank,
+        uint256 coefficient, 
         bool exponential,
         uint64 lastUpdateTime, 
-        uint64 currentTime) internal pure returns (uint256 nextTimestamp) {
+        uint64 currentTime) internal view returns (uint256 nextTimestamp) {
         
         // 1. get the nearest next threshold value for Chronosis
-        uint32 nextThreshold = getNextThresholdValue(chronosis);
+        uint32 nextThreshold = getNextThresholdValue(chronosis, rank);
 
         // 2. get the difference between current value and threshold value
         uint32 difference = chronosis - nextThreshold;
+        console.log("current chronosis: %d, nextThrehsold: %d, coefficient: %d", chronosis, nextThreshold, coefficient);
+        console.log("current chronosis difference: %d", difference);
+
 
         // 3. get elapsed time needed for chronosis's reaching its threshold
+        // Be AWARE: the difference should be waded to get into the elapsed time calculation
         // DO REMEMBER that the resulting time should NOT transcend current timestamp
         uint256 elapsedTime = exponential ? 
-                Math.sqrt(SafeMath.div(difference, coefficient), Math.Rounding.Up) : 
-                Math.mulDiv(difference, 1, coefficient, Math.Rounding.Up);
+                Math.sqrt(Math.mulDiv(toWadUnsafe(difference), 1, coefficient, Math.Rounding.Up), Math.Rounding.Up) : 
+                Math.mulDiv(toWadUnsafe(difference), 1, coefficient, Math.Rounding.Up);
         
-        return Math.min(lastUpdateTime + elapsedTime * 60 * 1000, currentTime);
+        console.log("Elapsed time for chronosis's reaching next threshold: %d minute, threshold timestamp: %d, currentTime: %d", 
+                elapsedTime, 
+                lastUpdateTime + elapsedTime * 60, 
+                currentTime
+        );
+        return Math.min(lastUpdateTime + elapsedTime * 60 , currentTime);
     }
 
     /**
@@ -121,9 +133,12 @@ library LibChronosis {
      * @dev the threshold should NOT lower than ZERO
      * 
      * @param   chronosis       current chronosis value
+     * @param   rank            avatar's rank
      * @return  nextThreshold   next threshold value
      */
-    function getNextThresholdValue(uint32 chronosis) internal pure returns (uint32 nextThreshold) {
-        return chronosis > 40 ? 40 : 0;
+    function getNextThresholdValue(uint32 chronosis, uint8 rank) internal pure returns (uint32 nextThreshold) {
+        uint32 maxValue = getMaxValue(rank);
+        uint256 threshold = getThreshold(maxValue);
+        return chronosis > threshold ? uint32(threshold) : 0;
     }
 }

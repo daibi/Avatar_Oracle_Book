@@ -2,6 +2,8 @@
 pragma solidity ^0.8.6;
 import { Math } from  "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import { toWadUnsafe, unsafeWadDiv } from "../common/SignedWadMath.sol";
+import "hardhat/console.sol";
 
 library LibConvergence {
 
@@ -42,6 +44,7 @@ library LibConvergence {
      * @dev the minimal decaying threshold should be ZERO(0)
      * 
      * @param   convergence             current convergence value
+     * @param   rank                    avatar's rank
      * @param   convergenceDecayRate   echo decay rate
      * @param   exponential             if current decay mode is in exponential
      * @param   lastUpdateTime          chronosis's last update time
@@ -51,25 +54,32 @@ library LibConvergence {
      */
     function getNextThresholdTimestamp(
         uint32 convergence, 
-        uint16 convergenceDecayRate, 
+        uint8 rank,
+        uint256 convergenceDecayRate, 
         bool exponential,
         uint64 lastUpdateTime, 
-        uint64 currentTime) internal pure returns (uint256 nextTimestamp) {
+        uint64 currentTime) internal view returns (uint256 nextTimestamp) {
         
         // 1. get the nearest next threshold value for Echo
-        uint32 nextThreshold = getNextThresholdValue(convergence);
+        uint32 nextThreshold = getNextThresholdValue(convergence, rank);
 
         // 2. get the difference between current value and threshold value
         uint32 difference = convergence - nextThreshold;
 
-        // 3. get elapsed time needed for echo's reaching its threshold
+        // 3. get elapsed time needed for convergence's reaching its threshold
+        // Be AWARE: the difference should be waded to get into the elapsed time calculation
         // DO REMEMBER that the resulting time should NOT transcend current timestamp
         uint256 elapsedTime = exponential ? 
-                Math.sqrt(SafeMath.div(difference, convergenceDecayRate), Math.Rounding.Up) : 
-                Math.mulDiv(difference, 1, convergenceDecayRate, Math.Rounding.Up);
-
+                Math.sqrt(Math.mulDiv(toWadUnsafe(difference), 1, convergenceDecayRate, Math.Rounding.Up), Math.Rounding.Up) : 
+                Math.mulDiv(toWadUnsafe(difference), 1, convergenceDecayRate, Math.Rounding.Up);
+        
+        console.log("Elapsed time for convergence's reaching next threshold: %d minute, difference: %d, threshold timestamp: %d", 
+                elapsedTime, 
+                difference,
+                lastUpdateTime + elapsedTime * 60
+        );
         // 4. Since elapsed time is a minute interval, should transfer it into millisecond 
-        return Math.min(lastUpdateTime + elapsedTime * 60 * 1000, currentTime);
+        return Math.min(lastUpdateTime + elapsedTime * 60, currentTime);
     }
 
     /**
@@ -77,13 +87,26 @@ library LibConvergence {
      * @dev the threshold should NOT lower than ZERO
      * 
      * @param   convergence     current convergence value
+     * @param   rank            avatar's rank
      * @return  nextThreshold   next threshold value
      */
-    function getNextThresholdValue(uint32 convergence) internal pure returns (uint32 nextThreshold) {
-        if (convergence > 60) {
-            return 60;
-        } else if (convergence > 40) {
-            return 40;
+    function getNextThresholdValue(uint32 convergence, uint8 rank) internal pure returns (uint32 nextThreshold) {
+        uint256 maxValue = getMaxValue(rank);
+
+        uint256 firstThreshold;
+        assembly {
+            firstThreshold := div(mul(maxValue, 3), 5)
+        }
+
+        uint256 secondThreshold;
+        assembly {
+            secondThreshold := div(mul(maxValue, 2), 5)
+        }
+
+        if (convergence > firstThreshold) {
+            return uint32(firstThreshold);
+        } else if (convergence > secondThreshold) {
+            return uint32(secondThreshold);
         }
         return 0;
     }
@@ -91,12 +114,14 @@ library LibConvergence {
     /**
      * get correlated decay value for Convergence
      * 
-     * @param   coefficient         current decay rate coefficient 
+     * @param   coefficient          current decay rate coefficient wad
      *
-     * @return  correlatedDecayRate correlated decay value for Convergence
+     * @return  correlatedDecayRate  correlated decay value wad for Convergence 
      */
-    function getCorrelateDecayRate(uint16 coefficient) internal pure returns(uint16 correlatedDecayRate) {
-        correlatedDecayRate = coefficient * 7 / 10;
+    function getCorrelateDecayRate(uint256 coefficient) internal pure returns(uint256 correlatedDecayRate) {
+        assembly {
+            correlatedDecayRate := div(mul(coefficient, 7), 10)
+        }    
     } 
 
     /**
@@ -109,19 +134,19 @@ library LibConvergence {
     function getMaxValue(uint8 rank) internal pure returns (uint256 maxValue) {
         if (rank == 1) {
             // egg
-            return 50;
+            return 500;
         } 
         if (rank == 2) {
             // seed
-            return 60;
+            return 600;
         }
         if (rank == 3) {
             // Spirit
-            return 75;
+            return 750;
         }
         if (rank == 4) {
             // Doppleganger
-            return 100;
+            return 1000;
         }
     }
 }
