@@ -17,6 +17,7 @@ describe ('avatarFacetTest', async function() {
     let diamondCutFacet
     let diamondLoupeFacet
     let avatarFacet
+    let avatarMockFacet
     let libERC721Factory
     let libAvatar
     let vrfFacet
@@ -31,6 +32,7 @@ describe ('avatarFacetTest', async function() {
         ownershipFacet = await ethers.getContractAt('OwnershipFacet', diamondAddress)
         avatarFacet = await ethers.getContractAt('AvatarFacet', diamondAddress)
         vrfFacet = await ethers.getContractAt('VRFFacet', diamondAddress)
+        avatarMockFacet = await ethers.getContractAt('AvatarInitializeFacet', diamondAddress)
     })
 
     it('should revert when avatar minting to 0x0 address', async () => {      
@@ -118,7 +120,7 @@ describe ('avatarFacetTest', async function() {
             .to.emit(libAvatar.attach(vrfFacet.address), 'AvatarRendered').withArgs(addr1.address, 101, currentCounter)
         
         // check the status & feature intialization for current avatar
-        const {owner, status, avatarType, rank, mintTime, randomNumber, lastUpdateTime, timeDecay, echo, convergence} = await avatarFacet.getByTokenId(100 + 1)
+        const {owner, status, avatarType, rank, mintTime, randomNumber, lastUpdateTime, chronosis, echo, convergence} = await avatarFacet.getByTokenId(100 + 1)
 
         assert.equal(owner, addr1.address, 'owner not match')
         assert.equal(status, 1, 'status not match')
@@ -126,9 +128,9 @@ describe ('avatarFacetTest', async function() {
         assert.equal(avatarType, randomNumber % 12 + 1, 'avatar type not match')
         assert.equal(rank, 1, 'rank not match')
         assert.isTrue(lastUpdateTime > 0, 'last update time not match')
-        assert.equal(timeDecay, 50)
-        assert.equal(echo, 50)
-        assert.equal(convergence, 50)
+        assert.equal(chronosis, 500)
+        assert.equal(echo, 500)
+        assert.equal(convergence, 500)
     })
 
     // it('should revert when mint the 1000th Avatar, it may take some time', async () => {

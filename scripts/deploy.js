@@ -48,8 +48,6 @@ async function deployDiamond (vrfCoordinatorAddress) {
     })
   }
 
-  // upgrade diamond with facets
-  console.log('Diamond Cut:', cut)
   const diamondCut = await ethers.getContractAt('IDiamondCut', diamond.address)
   let tx
   let receipt
@@ -76,7 +74,6 @@ async function deployDiamond (vrfCoordinatorAddress) {
   await avatarFacetInit.deployed()
 
   const selectors = getSelectors(avatarFacet)
-  console.log('selectors: ', selectors)
   let avatarInitCalldata = avatarFacetInit.interface.encodeFunctionData('init')
 
   tx = await diamondCut.diamondCut(

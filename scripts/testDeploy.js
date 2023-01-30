@@ -58,7 +58,6 @@ async function deployDiamond (vrfCoordinatorAddress) {
   }
 
   // upgrade diamond with facets
-  console.log('Diamond Cut:', cut)
   const diamondCut = await ethers.getContractAt('IDiamondCut', diamond.address)
   let tx
   let receipt
@@ -85,7 +84,6 @@ async function deployDiamond (vrfCoordinatorAddress) {
   await avatarFacetInit.deployed()
 
   const selectors = getSelectors(avatarFacet)
-  console.log('selectors: ', selectors)
   let avatarInitCalldata = avatarFacetInit.interface.encodeFunctionData('init')
 
   tx = await diamondCut.diamondCut(
@@ -127,6 +125,25 @@ async function deployDiamond (vrfCoordinatorAddress) {
   }
   console.log('Completed VRFFacet: ', vrfFacet.address)
 
+  // upgrade diamond with AvatarInitializeFacet(TEST ONLY)
+  const AvatarInitializeFacet = await ethers.getContractFactory('AvatarInitializeFacet')
+  const avatarInitializeFacet = await AvatarInitializeFacet.deploy()
+  await avatarInitializeFacet.deployed()
+
+  const avatarInitializeSelectors = getSelectors(avatarInitializeFacet);
+  tx = await diamondCut.diamondCut(
+    [{
+      facetAddress: avatarInitializeFacet.address,
+      action: FacetCutAction.Add,
+      functionSelectors: avatarInitializeSelectors
+    }],
+    diamondInit.address, functionCall)
+  
+  receipt = await tx.wait()
+  if (!receipt.status) {
+    throw Error(`Diamond upgrade failed: ${tx.hash}`)
+  }
+  console.log('Completed avatarInitializeFacet: ', avatarInitializeFacet.address)
   return diamond.address
 }
 

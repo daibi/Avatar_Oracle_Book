@@ -24,7 +24,7 @@ library LibAvatar {
         // init a new Avatar
         Avatar storage avatar = s.avatars[_tokenId];
         avatar.owner = _to;
-        avatar.mintTime = uint128(block.timestamp);
+        avatar.mintTime = uint64(block.timestamp);
         avatar.status = LibConstant.STATUS_VRF_PENDING;
 
         // expand owner's collection
@@ -60,13 +60,14 @@ library LibAvatar {
         s.avatars[_tokenId].rank = LibConstant.AVATAR_RANK_EGG;
         
         // render initial numerical values - start
-        s.avatars[_tokenId].timeDecay = 50;
-        s.avatars[_tokenId].echo = 50;
-        s.avatars[_tokenId].convergence = 50;
+        // @dev to see the decaying effect in a more tangible way, we should keep .1 precision. And since solidity doesn't support decimal, we initialize the value with *10 boost
+        s.avatars[_tokenId].chronosis = 500;
+        s.avatars[_tokenId].echo = 500;
+        s.avatars[_tokenId].convergence = 500;
         // render initial numerical values - end
 
         // last update time init, start to decay
-        s.avatars[_tokenId].lastUpdateTime = uint128(block.timestamp);
+        s.avatars[_tokenId].lastUpdateTime = uint64(block.timestamp);
         
         s.avatars[_tokenId].status = LibConstant.STATUS_RUNNING;
 

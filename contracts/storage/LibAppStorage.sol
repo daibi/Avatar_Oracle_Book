@@ -37,13 +37,13 @@ struct Avatar {
     uint8 rank;
 
     /** time of this Avatar generated */
-    uint128 mintTime;
+    uint64 mintTime;
 
     /** random number generated from chainlink VRF */
     uint256 randomNumber;
 
     /** last update time of the following SNAPSHOT metadata */
-    uint128 lastUpdateTime;
+    uint64 lastUpdateTime;
 
     /**************************************************************************** 
      *= Snapshot Metadata Start ================================================*
@@ -52,19 +52,19 @@ struct Avatar {
      *======= affecting these metadata. i.e: Do a divination ===================*
      ****************************************************************************/
     /**
-     * TimeDecay of this Avatar, represented by time interval between now and last interaction timestamp 
+     * chronosis of this Avatar, represented by time interval between now and last interaction timestamp 
      */
-    uint256 timeDecay;
+    uint32 chronosis;
 
     /**
      * Echo of this Avatar, denoted as percentage(%)
      */
-    uint256 echo;
+    uint32 echo;
 
     /**
      * Coverage of this Avatar, denoted as percentage(%)
      */
-    uint256 convergence;
+    uint32 convergence;
 
 
     /****************************************************************************
