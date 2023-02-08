@@ -3,7 +3,7 @@ pragma solidity ^0.8.6;
 import { Math } from  "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { toWadUnsafe, unsafeWadDiv } from "../common/SignedWadMath.sol";
-import "hardhat/console.sol";
+
 
 library LibConvergence {
 
@@ -73,11 +73,6 @@ library LibConvergence {
                 Math.sqrt(Math.mulDiv(toWadUnsafe(difference), 1, convergenceDecayRate, Math.Rounding.Up), Math.Rounding.Up) : 
                 Math.mulDiv(toWadUnsafe(difference), 1, convergenceDecayRate, Math.Rounding.Up);
         
-        console.log("Elapsed time for convergence's reaching next threshold: %d minute, difference: %d, threshold timestamp: %d", 
-                elapsedTime, 
-                difference,
-                lastUpdateTime + elapsedTime * 60
-        );
         // 4. Since elapsed time is a minute interval, should transfer it into millisecond 
         return Math.min(lastUpdateTime + elapsedTime * 60, currentTime);
     }

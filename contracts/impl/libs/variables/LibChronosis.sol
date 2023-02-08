@@ -4,7 +4,7 @@ pragma solidity ^0.8.6;
 import { Math } from  "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { toWadUnsafe, unsafeWadDiv } from "../common/SignedWadMath.sol";
-import "hardhat/console.sol";
+
 
 /**
  * library for Chronosis calculation
@@ -109,8 +109,6 @@ library LibChronosis {
 
         // 2. get the difference between current value and threshold value
         uint32 difference = chronosis - nextThreshold;
-        console.log("current chronosis: %d, nextThrehsold: %d, coefficient: %d", chronosis, nextThreshold, coefficient);
-        console.log("current chronosis difference: %d", difference);
 
 
         // 3. get elapsed time needed for chronosis's reaching its threshold
@@ -119,12 +117,6 @@ library LibChronosis {
         uint256 elapsedTime = exponential ? 
                 Math.sqrt(Math.mulDiv(toWadUnsafe(difference), 1, coefficient, Math.Rounding.Up), Math.Rounding.Up) : 
                 Math.mulDiv(toWadUnsafe(difference), 1, coefficient, Math.Rounding.Up);
-        
-        console.log("Elapsed time for chronosis's reaching next threshold: %d minute, threshold timestamp: %d, currentTime: %d", 
-                elapsedTime, 
-                lastUpdateTime + elapsedTime * 60, 
-                currentTime
-        );
         return Math.min(lastUpdateTime + elapsedTime * 60 , currentTime);
     }
 

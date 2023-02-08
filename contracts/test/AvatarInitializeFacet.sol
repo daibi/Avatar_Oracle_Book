@@ -4,7 +4,7 @@ pragma solidity ^0.8.6;
 import { Modifiers, Avatar } from '../storage/LibAppStorage.sol';
 import { Counters } from "@openzeppelin/contracts/utils/Counters.sol";
 import { LibConstant } from '../impl/libs/LibConstant.sol';
-import "hardhat/console.sol";
+
 
 /**
  * This contract is only used for mocking test cases ONLY!

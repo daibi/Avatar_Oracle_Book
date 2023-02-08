@@ -7,7 +7,7 @@ import { LibConstant } from '../libs/LibConstant.sol';
 import { LibAvatar } from '../libs/LibAvatar.sol';
 import { LibAvatarMetadata, UpdateValues } from '../libs/variables/LibAvatarMetadata.sol';
 import { VRFCoordinatorV2Interface } from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-import "hardhat/console.sol";
+
 /**
  * main NFT character - Avatar Facet
  */
@@ -53,7 +53,6 @@ contract AvatarFacet is Modifiers {
             rank = s.avatars[_tokenId].rank;
             randomNumber = s.avatars[_tokenId].randomNumber;
             lastUpdateTime = s.avatars[_tokenId].lastUpdateTime;
-            console.log("into metadata rendering, last update time, %d", lastUpdateTime);
             UpdateValues memory updateValues = LibAvatarMetadata.currentMetadata(_tokenId);
             chronosis = updateValues.chronosis;
             echo = updateValues.echo;
