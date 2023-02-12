@@ -4,6 +4,7 @@ pragma solidity ^0.8.7;
 import { Counters } from "@openzeppelin/contracts/utils/Counters.sol";
 import { LibDiamond } from "../libraries/LibDiamond.sol";
 import { VRFCoordinatorV2Interface } from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import { OperatorInterface } from "@chainlink/contracts/src/v0.8/interfaces/OperatorInterface.sol";
 
 /* 
  * Storage Slot Defination In a Human Readable Format
@@ -155,6 +156,8 @@ struct AppStorage {
     /** VRF keyhash - it varies from different blockchain network */
     bytes32 keyHash;
 
+    
+
     // Depends on the number of requested values that you want sent to the
     // fulfillRandomWords() function. Storing each word costs about 20,000 gas,
     // so 100,000 is a safe default for this example contract. Test and adjust
@@ -168,6 +171,9 @@ struct AppStorage {
 
     // number of rundom number retrieved from chainlink
     uint32 numWords;
+
+    // oracle operator address
+    OperatorInterface s_oracle;
 
     /************** chainlink configs end ********************/
 
