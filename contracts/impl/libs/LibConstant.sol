@@ -28,5 +28,17 @@ library LibConstant {
     /*********************************/
     uint8 constant REQUEST_SCENE_AVATAR_RENDER = 1;
 
- 
+
+    /********************************************/
+    /******* Chainlink Request Constants ********/
+    /********************************************/
+    address constant SENDER_OVERRIDE = address(0);
+    uint256 constant AMOUNT_OVERRIDE = 0;
+    uint256 constant ORACLE_ARGS_VERSION = 1;
+
+
+    /****************************/
+    /******* Boost Slots ********/
+    /****************************/
+    uint8 constant WEATHER_BOOST_SLOT = 1;
 }

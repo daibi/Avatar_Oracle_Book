@@ -1,3 +1,5 @@
+const { task } = require('hardhat/config')
+
 /* global ethers task */
 require('@nomiclabs/hardhat-waffle')
 require("dotenv").config()

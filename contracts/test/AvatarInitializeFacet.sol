@@ -2,9 +2,8 @@
 pragma solidity ^0.8.6;
 
 import { Modifiers, Avatar } from '../storage/LibAppStorage.sol';
-import { Counters } from "@openzeppelin/contracts/utils/Counters.sol";
 import { LibConstant } from '../impl/libs/LibConstant.sol';
-import "hardhat/console.sol";
+
 
 /**
  * This contract is only used for mocking test cases ONLY!
@@ -18,7 +17,7 @@ contract AvatarInitializeFacet is Modifiers {
     function mockAvatar(address _to, uint32 chronosis, uint32 echo, uint32 convergence, uint256 lastUpdateTime, uint16 avatarType, uint8 rank) external {
         require(_to != address(0), "AvatarFacet: mint to zero address!");
 
-        uint256 tokenId = LibConstant.NORMAL_AVATAR_START_ID + Counters.current(s.avatarCounter);
+        uint256 tokenId = LibConstant.NORMAL_AVATAR_START_ID + s.avatarCounter;
 
         Avatar storage avatar = s.avatars[tokenId];
 
@@ -33,6 +32,8 @@ contract AvatarInitializeFacet is Modifiers {
         avatar.rank = rank;
 
         // increase the normal Avatar Counter
-        Counters.increment(s.avatarCounter);
+        unchecked {
+            s.avatarCounter++;
+        }
     }
 }

@@ -25,5 +25,6 @@ contract VRFFacetInit {
         s.callbackGasLimit = _callbackGasLimit;
         s.requestConfirmations = _requestConfirmations;
         s.numWords = _numWords;
+        s.chainlinkRequestFee = (1 * 10**18) / 10;
     }
 }

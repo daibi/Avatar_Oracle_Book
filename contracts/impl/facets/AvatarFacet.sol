@@ -2,12 +2,11 @@
 pragma solidity ^0.8.6;
 
 import { Modifiers, RequestStatus } from '../../storage/LibAppStorage.sol';
-import { Counters } from "@openzeppelin/contracts/utils/Counters.sol";
 import { LibConstant } from '../libs/LibConstant.sol';
 import { LibAvatar } from '../libs/LibAvatar.sol';
 import { LibAvatarMetadata, UpdateValues } from '../libs/variables/LibAvatarMetadata.sol';
 import { VRFCoordinatorV2Interface } from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-import "hardhat/console.sol";
+
 /**
  * main NFT character - Avatar Facet
  */
@@ -20,7 +19,7 @@ contract AvatarFacet is Modifiers {
     function totalNormalAvatar() external view returns(
         uint256 count
     ) {
-        count = Counters.current(s.avatarCounter) - 1;
+        count = s.avatarCounter - 1;
     }
 
     /**
@@ -39,7 +38,8 @@ contract AvatarFacet is Modifiers {
         uint64 lastUpdateTime,
         uint32 chronosis,
         uint32 echo,
-        uint32 convergence
+        uint32 convergence,
+        uint16 weatherBoost
     ) {
         require(s.avatars[_tokenId].status > 0, "AvatarFacet: avatar not exist");
 
@@ -53,7 +53,12 @@ contract AvatarFacet is Modifiers {
             rank = s.avatars[_tokenId].rank;
             randomNumber = s.avatars[_tokenId].randomNumber;
             lastUpdateTime = s.avatars[_tokenId].lastUpdateTime;
-            console.log("into metadata rendering, last update time, %d", lastUpdateTime);
+
+            uint64 weatherBoostTime = s.avatars[_tokenId].boostTimeRecorder[LibConstant.WEATHER_BOOST_SLOT];
+            if (block.timestamp <= weatherBoostTime + 3 days) {
+                // check if boost has expired
+                weatherBoost = s.avatars[_tokenId].boostSlots[LibConstant.WEATHER_BOOST_SLOT];
+            }
             UpdateValues memory updateValues = LibAvatarMetadata.currentMetadata(_tokenId);
             chronosis = updateValues.chronosis;
             echo = updateValues.echo;
@@ -98,7 +103,7 @@ contract AvatarFacet is Modifiers {
         require(s.avatarStarted, "AvatarFacet: avatar mint is not started!");
         require(s.chainlinkInit, "AvatarFacet: chainlink is not initialized");
 
-        uint256 _currentTokenId = LibConstant.NORMAL_AVATAR_START_ID + Counters.current(s.avatarCounter);
+        uint256 _currentTokenId = LibConstant.NORMAL_AVATAR_START_ID + s.avatarCounter;
         require(_currentTokenId <= LibConstant.MAX_AVATAR_ID, "AvatarFacet: out of Avatars!");
 
         LibAvatar.mint(_to, _currentTokenId);
@@ -107,7 +112,9 @@ contract AvatarFacet is Modifiers {
         requestRandomWord(_currentTokenId);
 
         // increase the normal Avatar Counter
-        Counters.increment(s.avatarCounter);
+        unchecked {
+            s.avatarCounter++;
+        }
     }
 
     /**
