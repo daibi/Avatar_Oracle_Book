@@ -141,7 +141,7 @@ async function deployDiamond () {
         action: FacetCutAction.Add,
         functionSelectors: chainlinkOutsideAPISelectors
       }],
-      chainlinkOutsideAPIInit.address, chainlinkInitData, { gasLimit: 800000 })
+      chainlinkOutsideAPIInit.address, chainlinkInitData, { gasLimit: 18800000 })
 
   receipt = await tx.wait()
   if (!receipt.status) {
