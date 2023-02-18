@@ -1,3 +1,5 @@
+const { task } = require('hardhat/config')
+
 /* global ethers task */
 require('@nomiclabs/hardhat-waffle')
 require("dotenv").config()
@@ -38,10 +40,10 @@ module.exports = {
       initialBaseFeePerGas: 0,
       blockGasLimit: 18800000,
     },
-    // mumbai: {
-    //   url: ALCHEMY_API_URL,
-    //   accounts: [`0x${PRIVATE_KEY}`]
-    // }
+    mumbai: {
+      url: ALCHEMY_API_URL,
+      accounts: [`0x${PRIVATE_KEY}`]
+    }
   },
   namedAccounts: {
     deployer: 0

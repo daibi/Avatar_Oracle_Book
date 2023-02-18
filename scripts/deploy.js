@@ -3,8 +3,9 @@
 
 const { ethers } = require('hardhat')
 const { getSelectors, FacetCutAction } = require('./libraries/diamond.js')
+require("dotenv").config()
 
-async function deployDiamond (vrfCoordinatorAddress) {
+async function deployDiamond () {
   const accounts = await ethers.getSigners()
   const contractOwner = accounts[0]
 
@@ -100,7 +101,7 @@ async function deployDiamond (vrfCoordinatorAddress) {
   await vrfFacetInit.deployed()
 
   const vrfSelectors = getSelectors(vrfFacet)
-  let vrfInitCalldata = vrfFacetInit.interface.encodeFunctionData('init', [ethers.constants.AddressZero, 2796, "0x4b09e658ed251bcafeebbc69400383d49f344ace09b9576fe248bb02c003fe9f", 100000, 3, 1])
+  let vrfInitCalldata = vrfFacetInit.interface.encodeFunctionData('init', ["0x7a1bac17ccc5b313516c5e16fb24f7659aa5ebed", 3190, "0x4b09e658ed251bcafeebbc69400383d49f344ace09b9576fe248bb02c003fe9f", 100000, 3, 1])
   tx = await diamondCut.diamondCut(
     [{
       facetAddress: vrfFacet.address,
@@ -114,6 +115,39 @@ async function deployDiamond (vrfCoordinatorAddress) {
     throw Error(`Diamond upgrade failed: ${tx.hash}`)
   }
   console.log('Completed VRFFacet')
+
+
+  // upgrade diamond with chainlink API facet
+  const { ACCU_WEATHER_API_KEY } = process.env;
+  console.log('deploying chainlink outside API, diamond address', diamond.address , ' apiKey: ', ACCU_WEATHER_API_KEY)
+
+  // upgrade diamond with Chainlink outside API Facet
+  const ChainlinkOutsideAPIFacet = await ethers.getContractFactory('ChainlinkAPIFacet')
+  const chainlinkOutsideAPIFacet = await ChainlinkOutsideAPIFacet.deploy()
+  await chainlinkOutsideAPIFacet.deployed()
+
+  // deploy the init contract for chainlink outside API plugin
+  const ChainlinkOutsideAPIInit = await ethers.getContractFactory('ChainlinkOutsideAPIInit')
+  const chainlinkOutsideAPIInit = await ChainlinkOutsideAPIInit.deploy()
+  await chainlinkOutsideAPIInit.deployed()
+
+  // get selectors from chainlink outside API facet
+  const chainlinkOutsideAPISelectors = getSelectors(chainlinkOutsideAPIFacet)
+  let chainlinkInitData = chainlinkOutsideAPIInit.interface.encodeFunctionData('init', [diamond.address, ACCU_WEATHER_API_KEY])
+
+  tx = await diamondCut.diamondCut(
+      [{
+        facetAddress: chainlinkOutsideAPIFacet.address,
+        action: FacetCutAction.Add,
+        functionSelectors: chainlinkOutsideAPISelectors
+      }],
+      chainlinkOutsideAPIInit.address, chainlinkInitData, { gasLimit: 800000 })
+
+  receipt = await tx.wait()
+  if (!receipt.status) {
+      throw Error(`Diamond upgrade failed: ${tx.hash}`)
+  }
+  console.log('Completed chainlink outside API facet, chainlink outside address:', chainlinkOutsideAPIFacet.address)
 
   return diamond.address
 }

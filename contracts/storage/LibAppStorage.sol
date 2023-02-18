@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
-import { Counters } from "@openzeppelin/contracts/utils/Counters.sol";
 import { LibDiamond } from "../libraries/LibDiamond.sol";
 import { VRFCoordinatorV2Interface } from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import { OperatorInterface } from "@chainlink/contracts/src/v0.8/interfaces/OperatorInterface.sol";
+import { LinkTokenInterface } from "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
+import { LibChainlinkProtocol } from "../shared/libraries/LibChainlinkProtocol.sol";
+
+uint256 constant BOOST_SLOT_NUM = 32;
 
 /* 
  * Storage Slot Defination In a Human Readable Format
@@ -66,6 +70,16 @@ struct Avatar {
      */
     uint32 convergence;
 
+    /**
+     * boost slots - starts from 1st
+     * 1 - boosted by weather condition
+     */
+    uint16[BOOST_SLOT_NUM] boostSlots;
+
+    /**
+     * boost timestamp recorder
+     */
+    uint64[BOOST_SLOT_NUM] boostTimeRecorder;
 
     /****************************************************************************
      *= Snapshot Metadata End ==================================================*
@@ -86,6 +100,11 @@ struct RequestStatus {
     uint8 scene; // Usage for this requestId: 0-mainNFT; 1-fortuneCookie
     uint256 tokenId; // request random number result used for certain tokenId
     uint256[] randomWords;
+}
+
+struct PendingAPIRequest {
+    address oracleAddress; // oracle address
+    uint256 tokenId; // tokenId record
 }
 
 
@@ -116,11 +135,14 @@ struct ChainlinkRequestStatus {
  */
 struct AppStorage {
 
-    /** Counter for minted normal Avatars */
-    Counters.Counter avatarCounter;
+    /** address of diamond contract */
+    address diamondAddress;
 
-    /** Counters for minted legendary Avatars */
-    Counters.Counter legendaryAvatarCounter;
+    /** Counter for minted normal Avatars */
+    uint256 avatarCounter;
+
+    /** Counter for minted legendary Avatars */
+    uint256 legendaryAvatarCounter;
 
     /** tokenId -> Avatar */
     mapping(uint256 => Avatar) avatars;
@@ -155,6 +177,8 @@ struct AppStorage {
     /** VRF keyhash - it varies from different blockchain network */
     bytes32 keyHash;
 
+    
+
     // Depends on the number of requested values that you want sent to the
     // fulfillRandomWords() function. Storing each word costs about 20,000 gas,
     // so 100,000 is a safe default for this example contract. Test and adjust
@@ -168,6 +192,42 @@ struct AppStorage {
 
     // number of rundom number retrieved from chainlink
     uint32 numWords;
+
+    // oracle operator address
+    OperatorInterface s_oracle;
+
+    // LINK token contract address
+    LinkTokenInterface s_link;
+
+    /** 
+     * chainlink jobId 
+     * polygon mumbai - GET uint256: ca98366cc7314957b8c012c72f05aeeb
+     */
+    bytes32 jobId;
+
+    // oracle request counter
+    uint256 s_requestCount;
+
+    // pending requests mapping 
+    mapping(bytes32 => PendingAPIRequest) s_pendingRequests;
+
+    // accuWeather API
+    string accuWeatherApiKey;
+
+    // chainlink's last request URL - used for test only
+    string lastRequestURL;
+
+    // chainlink's last request - used for test only
+    string weather;
+
+    // weather icon recorder
+    uint8 weatherIcon;
+
+    // request fee for each outside api request
+    uint256 chainlinkRequestFee;
+
+    // weather text mapping recorder
+    mapping(bytes32 => uint8) weatherMapping;
 
     /************** chainlink configs end ********************/
 
@@ -202,6 +262,17 @@ contract Modifiers {
      */
     modifier onlyOwner() {
         LibDiamond.enforceIsContractOwner();
+        _;
+    }
+
+    /**
+     * @dev Reverts if the sender is not the oracle of the request.
+     * Emits ChainlinkFulfilled event.
+     * @param requestId The request ID for fulfillment
+     */
+    modifier recordChainlinkFulfillment(bytes32 requestId) {
+        require(msg.sender == s.s_pendingRequests[requestId].oracleAddress, "Source must be the oracle of the request");
+        emit LibChainlinkProtocol.ChainlinkFulfilled(requestId);
         _;
     }
 
